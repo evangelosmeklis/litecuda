@@ -1,5 +1,6 @@
 #include "vgpu/scheduler.hpp"
 #include <chrono>
+#include <iostream> // For logging
 
 namespace vgpu {
 
@@ -22,8 +23,8 @@ void Scheduler::stop() {
         std::lock_guard<std::mutex> lock(mutex_);
         running_ = false;
     }
-    cv_.notify_one();
-    
+    cv_.notify_all();
+
     if (scheduler_thread_.joinable()) {
         scheduler_thread_.join();
     }
@@ -32,7 +33,7 @@ void Scheduler::stop() {
 void Scheduler::submitTask(VirtualGPU* vgpu, std::function<void()> task, int priority) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        task_queue_.push(Task{vgpu, task, priority});
+        task_queue_.emplace(Task{vgpu, task, priority});
     }
     cv_.notify_one();
 }
@@ -49,21 +50,25 @@ void Scheduler::schedulerLoop() {
             cv_.wait(lock, [this] { 
                 return !running_ || !task_queue_.empty(); 
             });
-            
+
             if (!running_ && task_queue_.empty()) {
                 break;
             }
-            
+
             if (!task_queue_.empty()) {
                 task = task_queue_.top();
                 task_queue_.pop();
             }
         }
-        
-        if (task.work) {
-            task.work();
+
+        try {
+            if (task.work) {
+                task.work();
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Task execution error: " << e.what() << std::endl;
         }
     }
 }
 
-} // namespace vgpu 
+}

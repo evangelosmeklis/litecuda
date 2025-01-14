@@ -27,4 +27,4 @@ private:
     void* base_ptr_;
 };
 
-} // namespace vgpu 
+}

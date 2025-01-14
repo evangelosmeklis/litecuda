@@ -3,6 +3,7 @@
 #include <cuda_runtime.h>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 namespace vgpu {
 
@@ -37,6 +38,7 @@ private:
     size_t used_memory_;
     int device_id_;
     void* memory_start_;  // Base pointer for this vGPU's memory region
+    std::unordered_map<void*, size_t> allocations_;  // Track memory allocations
 };
 
 } // namespace vgpu 
